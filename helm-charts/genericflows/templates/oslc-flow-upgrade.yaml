@@ -1,0 +1,357 @@
+{{- if eq .Values.oslc.flow_kind "upgrade" }}
+{{- $envAll := . }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: {{ $envAll.Release.Name }}
+spec:
+  entrypoint: {{ $envAll.Release.Name }}
+  serviceAccountName: openstacklcm-argo-sa
+  templates:
+  - name: {{ $envAll.Release.Name }}
+    steps:
+    # Check that the Service is actually deployed (i.e. Operational Stage exists)
+    - - name: {{ .Values.serviceName }}-check-flow-startpoint
+        template: check-flow-startpoint
+
+    # Drain Traffic
+    - - name: {{ .Values.serviceName }}-start-trafficdrain
+        template: create-trafficdrain
+    - - name: {{ .Values.serviceName }}-wait-trafficdrain-completion
+        template: wait-trafficdrain-completion
+
+    # Backup Data and Upgrade Software/Config
+    - - name: {{ .Values.serviceName }}-start-upgrade
+        template: create-upgrade
+    - - name: {{ .Values.serviceName }}-wait-upgrade-completion
+        template: wait-upgrade-completion
+
+    # Test the upgraded installation
+    - - name: {{ .Values.serviceName }}-start-test
+        template: create-test
+    - - name: {{ .Values.serviceName }}-wait-test-completion
+        template: wait-test-completion
+        continueOn:
+           failed: {{ .Values.continue_on_test_failed }}
+
+    # Restore Data and Rollback Software/Config if test failed
+    - - name: {{ .Values.serviceName }}-start-rollback
+        template: create-rollback
+        when: {{ printf "%s.%s-%s" "{{steps" $.Values.serviceName "wait-test-completion.outputs.parameters.test-results}} == failed" | quote }}
+    - - name: {{ .Values.serviceName }}-wait-rollback-completion
+        template: wait-rollback-completion
+        when: {{ printf "%s.%s-%s" "{{steps" $.Values.serviceName "wait-test-completion.outputs.parameters.test-results}} == failed" | quote }}
+
+    # Rollout Traffic regardless if test was successfull or if we had to rollback
+    - - name: {{ .Values.serviceName }}-start-trafficrollout
+        template: create-trafficrollout
+    - - name: {{ .Values.serviceName }}-wait-trafficrollout-completion
+        template: wait-trafficrollout-completion
+
+  - name: check-flow-startpoint
+    activeDeadlineSeconds: {{ .Values.phases.timeout.wait_phase_operational }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.wait_phase_operational }}
+    resource:
+      action: get
+      successCondition: status.actualState == deployed
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: OperationalPhase
+        metadata:
+          name: {{ .Values.serviceName }}-operational
+
+  - name: create-trafficdrain
+    activeDeadlineSeconds: {{ .Values.phases.timeout.enable_phase_trafficdrain }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.enabled_phase_trafficdrain }}
+    resource:
+      action: create
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: TrafficDrainPhase
+        metadata:
+          name: {{ .Values.serviceName }}-trafficdrain
+          ownerReferences:
+          - apiVersion: argoproj.io/v1alpha1
+            blockOwnerDeletion: true
+            kind: Workflow
+            name: {{ printf "%s" "{{workflow.name}}" | quote }}
+            uid: {{ printf "%s" "{{workflow.uid}}" | quote }}
+        spec:
+          openstackServiceName: {{ .Values.serviceName }}
+          targetOpenstackServiceVersion: moc.version.to.trafficdrain.to
+          targetState: deployed
+          source:
+            type: tar
+            location: /opt/openstacklcm-operator/helm-charts/{{ .Values.serviceName }}
+          # initDB: "true"
+          # config: null
+
+  - name: wait-trafficdrain-completion
+    activeDeadlineSeconds: {{ .Values.phases.timeout.wait_phase_trafficdrain }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.wait_phase_trafficdrain }}
+    resource:
+      action: get
+      successCondition: status.actualState == deployed
+      failureCondition: status.actualState == failed
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: TrafficDrainPhase
+        metadata:
+          name: {{ .Values.serviceName }}-trafficdrain
+
+  - name: delete-trafficdrain
+    activeDeadlineSeconds: {{ .Values.phases.timeout.enable_phase_trafficdrain }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.enabled_phase_trafficdrain }}
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: TrafficDrainPhase
+        metadata:
+          name: {{ .Values.serviceName }}-trafficdrain
+
+  - name: create-upgrade
+    activeDeadlineSeconds: {{ .Values.phases.timeout.enable_phase_upgrade }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.enabled_phase_upgrade }}
+    resource:
+      action: create
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: UpgradePhase
+        metadata:
+          name: {{ .Values.serviceName }}-upgrade
+          ownerReferences:
+          - apiVersion: argoproj.io/v1alpha1
+            blockOwnerDeletion: true
+            kind: Workflow
+            name: {{ printf "%s" "{{workflow.name}}" | quote }}
+            uid: {{ printf "%s" "{{workflow.uid}}" | quote }}
+        spec:
+          openstackServiceName: {{ .Values.serviceName }}
+          targetOpenstackServiceVersion: moc.version.to.upgrade.to
+          targetState: deployed
+          source:
+            type: tar
+            location: /opt/openstacklcm-operator/helm-charts/{{ .Values.serviceName }}
+          storageType: offsite
+          backupPolicy:
+            timeoutInSecond: 3
+          # ceph:
+          #   cephSecret: thesecret
+          #   path: example
+          clientTLSSecret: client.crt
+          offsite:
+            endpoint: sftp://foo.bar
+            forcePathStyle: true
+            offsiteSecret: thesecret
+            path: xxx
+          openstackEndpoints:
+          - https://tar.com
+
+  - name: wait-upgrade-completion
+    activeDeadlineSeconds: {{ .Values.phases.timeout.wait_phase_upgrade }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.wait_phase_upgrade }}
+    resource:
+      action: get
+      successCondition: status.actualState == deployed
+      failureCondition: status.actualState == failed
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: UpgradePhase
+        metadata:
+          name: {{ .Values.serviceName }}-upgrade
+
+  - name: delete-upgrade
+    activeDeadlineSeconds: {{ .Values.phases.timeout.enable_phase_upgrade }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.enabled_phase_upgrade }}
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: UpgradePhase
+        metadata:
+          name: {{ .Values.serviceName }}-upgrade
+
+  - name: create-test
+    activeDeadlineSeconds: {{ .Values.phases.timeout.enable_phase_test }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.enabled_phase_test }}
+    resource:
+      action: create
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: TestPhase
+        metadata:
+          name: {{ .Values.serviceName }}-test
+          ownerReferences:
+          - apiVersion: argoproj.io/v1alpha1
+            blockOwnerDeletion: true
+            kind: Workflow
+            name: {{ printf "%s" "{{workflow.name}}" | quote }}
+            uid: {{ printf "%s" "{{workflow.uid}}" | quote }}
+        spec:
+          openstackServiceName: {{ .Values.serviceName }}
+          targetOpenstackServiceVersion: moc.version.to.test.to
+          targetState: deployed
+          source:
+            type: tar
+            location: /opt/openstacklcm-operator/helm-charts/{{ .Values.serviceName }}
+          testStrategy:
+            timeoutInSecond: 300
+          # config: null
+
+  - name: wait-test-completion
+    activeDeadlineSeconds: {{ .Values.phases.timeout.wait_phase_test }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.wait_phase_test }}
+    resource:
+      action: get
+      successCondition: status.actualState == deployed
+      failureCondition: status.actualState == failed
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: TestPhase
+        metadata:
+          name: {{ .Values.serviceName }}-test
+    outputs:
+      parameters:
+      - name: test-results
+        valueFrom:
+          jsonPath: '{.status.testResults}'
+
+  - name: delete-test
+    activeDeadlineSeconds: {{ .Values.phases.timeout.enable_phase_test }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.enabled_phase_test }}
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: TestPhase
+        metadata:
+          name: {{ .Values.serviceName }}-test
+
+  - name: create-rollback
+    activeDeadlineSeconds: {{ .Values.phases.timeout.enable_phase_rollback }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.enabled_phase_rollback }}
+    resource:
+      action: create
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: RollbackPhase
+        metadata:
+          name: {{ .Values.serviceName }}-rollback
+          ownerReferences:
+          - apiVersion: argoproj.io/v1alpha1
+            blockOwnerDeletion: true
+            kind: Workflow
+            name: {{ printf "%s" "{{workflow.name}}" | quote }}
+            uid: {{ printf "%s" "{{workflow.uid}}" | quote }}
+        spec:
+          openstackServiceName: {{ .Values.serviceName }}
+          targetOpenstackServiceVersion: moc.version.to.rollback.to
+          targetState: deployed
+          source:
+            type: tar
+            location: /opt/openstacklcm-operator/helm-charts/{{ .Values.serviceName }}
+          openstackEndpoints:
+          - https://tar.com
+          restoreDB: "true"
+          storageType: offsite
+          # ceph:
+          #   cephSecret: thesecret
+          #   path: example
+          offsite:
+            endpoint: sftp://foo.bar
+            forcePathStyle: true
+            offsiteSecret: thesecret
+            path: xxx
+
+  - name: wait-rollback-completion
+    activeDeadlineSeconds: {{ .Values.phases.timeout.wait_phase_rollback }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.wait_phase_rollback }}
+    resource:
+      action: get
+      successCondition: status.actualState == deployed
+      failureCondition: status.actualState == failed
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: RollbackPhase
+        metadata:
+          name: {{ .Values.serviceName }}-rollback
+
+  - name: delete-rollback
+    activeDeadlineSeconds: {{ .Values.phases.timeout.enable_phase_rollback }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.enabled_phase_rollback }}
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: RollbackPhase
+        metadata:
+          name: {{ .Values.serviceName }}-rollback
+
+  - name: create-trafficrollout
+    activeDeadlineSeconds: {{ .Values.phases.timeout.enable_phase_trafficrollout }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.enabled_phase_trafficrollout }}
+    resource:
+      action: create
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: TrafficRolloutPhase
+        metadata:
+          name: {{ .Values.serviceName }}-trafficrollout
+          ownerReferences:
+          - apiVersion: argoproj.io/v1alpha1
+            blockOwnerDeletion: true
+            kind: Workflow
+            name: {{ printf "%s" "{{workflow.name}}" | quote }}
+            uid: {{ printf "%s" "{{workflow.uid}}" | quote }}
+        spec:
+          openstackServiceName: {{ .Values.serviceName }}
+          targetOpenstackServiceVersion: moc.version.to.trafficrollout.to
+          targetState: deployed
+          source:
+            type: tar
+            location: /opt/openstacklcm-operator/helm-charts/{{ .Values.serviceName }}
+          # initDB: "true"
+          # config: null
+
+  - name: wait-trafficrollout-completion
+    activeDeadlineSeconds: {{ .Values.phases.timeout.wait_phase_trafficrollout }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.wait_phase_trafficrollout }}
+    resource:
+      action: get
+      successCondition: status.actualState == deployed
+      failureCondition: status.actualState == failed
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: TrafficRolloutPhase
+        metadata:
+          name: {{ .Values.serviceName }}-trafficrollout
+
+  - name: delete-trafficrollout
+    activeDeadlineSeconds: {{ .Values.phases.timeout.enable_phase_trafficrollout }}
+    retryStrategy:
+      limit: {{ .Values.phases.retries.enabled_phase_trafficrollout }}
+    resource:
+      action: delete
+      manifest: |
+        apiVersion: openstacklcm.airshipit.org/v1alpha1
+        kind: TrafficRolloutPhase
+        metadata:
+          name: {{ .Values.serviceName }}-trafficrollout
+{{ end }}

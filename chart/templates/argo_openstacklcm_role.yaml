@@ -1,0 +1,78 @@
+# Create a service account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: openstacklcm-argo-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+  name: openstacklcm-argo-role
+rules:
+  # This is to be able to annotates pod with output parameters
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - '*'
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - workflows
+      - workflows/finalizers
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - openstacklcm.airshipit.org
+    resources:
+      - deletephases
+      - deletephases/finalizers
+      - installphases
+      - installphases/finalizers
+      - operationalphases
+      - operationalphases/finalizers
+      - planningphases
+      - planningphases/finalizers
+      - rollbackphases
+      - rollbackphases/finalizers
+      - testphases
+      - testphases/finalizers
+      - trafficdrainphases
+      - trafficdrainphases/finalizers
+      - trafficrolloutphases
+      - trafficrolloutphases/finalizers
+      - upgradephases
+      - upgradephases/finalizers
+      - oslcs
+      - oslcs/finalizers
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - get
+      - list
+      - patch
+      - update
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: openstacklcm-argo-rolebinding
+subjects:
+- kind: ServiceAccount
+  name: openstacklcm-argo-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: openstacklcm-argo-role

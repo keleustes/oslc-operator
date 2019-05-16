@@ -1,0 +1,17 @@
+{{- if eq .Values.oslc.stage "trafficdrain" }}
+{{- $envAll := . }}
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: {{ $envAll.Release.Name }}
+spec:
+  entrypoint: whalesay
+  templates:
+  - name: whalesay
+    container:
+      image: docker/whalesay:latest
+      command: [cowsay]
+      args: [{{ printf "%s %s-%s" "Executing trafficdrain:" $envAll.Release.Name "trafficdrain" | quote }}]
+{{ end }}

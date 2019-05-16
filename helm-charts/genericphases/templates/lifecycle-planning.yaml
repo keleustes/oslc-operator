@@ -1,0 +1,3 @@
+{{- if or (eq .Values.oslc.stage "planning") (eq .Values.lifecycle "planning") }}
+{{- $envAll := . }}
+{{ end }}

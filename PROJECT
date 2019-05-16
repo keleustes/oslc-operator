@@ -1,0 +1,4 @@
+version: "1"
+domain: airshipit.org
+output-dir: deploy/crds
+repo: github.com/keleustes/oslc-operator

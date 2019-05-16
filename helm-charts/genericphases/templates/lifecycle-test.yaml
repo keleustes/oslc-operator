@@ -1,0 +1,82 @@
+{{- if or (eq .Values.oslc.stage "test") (eq .Values.lifecycle "test") }}
+{{- $envAll := . }}
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: {{ $envAll.Release.Name }}
+  namespace: {{ $envAll.Release.Namespace }}
+spec:
+  entrypoint: {{ $envAll.Release.Name }}
+  serviceAccountName: wf-{{ .Values.serviceName }}-sa
+  volumes:
+  {{- include "openstackservice.templates.steps._db_init.volumes" . | nindent 2 }}
+  {{- include "openstackservice.templates.steps._db_sync.volumes" . | nindent 2 }}
+  {{- include "openstackservice.templates.steps._rabbit_init.volumes" . | nindent 2 }}
+  templates:
+  - name: {{ $envAll.Release.Name }}
+    dag:
+      tasks:
+      - name: svc-memcached
+        template: init
+        arguments:
+          parameters:
+          - name: service
+            value: {{ printf "%s:%s" $envAll.Release.Namespace "memcached" | quote }}
+      - name: svc-mariadb
+        template: init
+        arguments:
+          parameters:
+          - name: service
+            value: {{ printf "%s:%s" $envAll.Release.Namespace "mariadb" | quote }}
+      - name: svc-rabbitmq
+        template: init
+        arguments:
+          parameters:
+          - name: service
+            value: {{ printf "%s:%s" $envAll.Release.Namespace "rabbitmq" | quote }}
+      - name: whalesay
+        template: whalesay
+  - name: whalesay
+    container:
+      image: docker/whalesay:latest
+      command: [cowsay]
+      args: [{{ printf "%s-%s-%s" $envAll.Release.Name "test" "stage" | quote }}]
+  - name: init
+    inputs:
+      parameters:
+      - name: service
+    container:
+      name: "{{"{{inputs.parameters.service}}-init"}}"
+      image: {{ .Values.images.tags.dep_check }}
+      imagePullPolicy: IfNotPresent
+      env:
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.name
+      - name: NAMESPACE
+        valueFrom:
+          fieldRef:
+            apiVersion: v1
+            fieldPath: metadata.namespace
+      - name: PATH
+        value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
+      - name: DEPENDENCY_SERVICE
+        value: "{{"{{inputs.parameters.service}}"}}"
+      - name: COMMAND
+        value: "echo done"
+    command:
+      - kubernetes-entrypoint
+  - name: svc-just-in-time
+    inputs:
+      parameters:
+        - name: service
+    resource:
+      action: get
+      manifest: |
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: "{{"{{inputs.parameters.service}}"}}"
+{{ end }}

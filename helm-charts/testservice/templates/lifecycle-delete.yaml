@@ -1,0 +1,17 @@
+{{- if eq .Values.oslc.stage "delete" }}
+{{- $envAll := . }}
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: {{ $envAll.Release.Name }}
+spec:
+  entrypoint: whalesay
+  templates:
+  - name: whalesay
+    container:
+      image: docker/whalesay:latest
+      command: [cowsay]
+      args: [{{ printf "%s %s-%s" "Executing delete:" $envAll.Release.Name "delete" | quote }}]
+{{ end }}

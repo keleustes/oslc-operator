@@ -1,0 +1,12 @@
+---
+apiVersion: openstacklcm.airshipit.org/v1alpha1
+kind: Oslc
+metadata:
+  name: mockservice-all-phases
+spec:
+  serviceName: mockservice
+  source:
+    type: local
+    location: /opt/openstacklcm-operator/helm-charts/mockservice/templates/oslc-flow-all-phases.yaml
+  flowKind: all-phases
+  targetState: deployed

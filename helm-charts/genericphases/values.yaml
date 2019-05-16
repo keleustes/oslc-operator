@@ -1,0 +1,40 @@
+
+serviceName: ""
+
+oslc:
+  stage: ""
+  flow_kind: ""
+
+
+phases:
+  retries:
+    enabled_phase_delete: 2
+    enabled_phase_install: 2
+    enabled_phase_rollback: 2
+    enabled_phase_test: 2
+    enabled_phase_trafficdrain: 2
+    enabled_phase_trafficrollout: 2
+    enabled_phase_upgrade: 2
+    wait_phase_delete: 2
+    wait_phase_install: 2
+    wait_phase_rollback: 2
+    wait_phase_test: 2
+    wait_phase_trafficdrain: 2
+    wait_phase_trafficrollout: 2
+    wait_phase_upgrade: 2
+
+  timeout:
+    enable_phase_delete: 120
+    enable_phase_install: 120
+    enable_phase_rollback: 120
+    enable_phase_test: 120
+    enable_phase_trafficdrain: 120
+    enable_phase_trafficrollout: 120
+    enable_phase_upgrade: 120
+    wait_phase_delete: 120
+    wait_phase_install: 300
+    wait_phase_rollback: 120
+    wait_phase_test: 120
+    wait_phase_trafficdrain: 120
+    wait_phase_trafficrollout: 120
+    wait_phase_upgrade: 300

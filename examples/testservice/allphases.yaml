@@ -1,0 +1,12 @@
+---
+apiVersion: openstacklcm.airshipit.org/v1alpha1
+kind: Oslc
+metadata:
+  name: testservice-all-phases
+spec:
+  serviceName: testservice
+  source:
+    type: tar
+    location: /opt/openstacklcm-operator/helm-charts/testservice
+  flowKind: all-phases
+  targetState: deployed

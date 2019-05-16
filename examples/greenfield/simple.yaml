@@ -1,0 +1,12 @@
+---
+apiVersion: openstacklcm.airshipit.org/v1alpha1
+kind: Oslc
+metadata:
+  name: testservice-install-flow
+spec:
+  serviceName: testservice
+  source:
+    type: generate
+    location: /opt/openstacklcm-operator/helm-charts/testservice
+  flowKind: install
+  targetState: deployed

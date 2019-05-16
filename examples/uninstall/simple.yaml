@@ -1,0 +1,12 @@
+---
+apiVersion: openstacklcm.airshipit.org/v1alpha1
+kind: Oslc
+metadata:
+  name: testservice-uninstall-flow
+spec:
+  serviceName: testservice
+  source:
+    type: generate
+    location: /opt/openstacklcm-operator/helm-charts/testservice
+  flowKind: uninstall
+  targetState: deployed

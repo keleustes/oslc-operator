@@ -1,0 +1,100 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: openstacklcm-operator
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - services
+  - endpoints
+  - persistentvolumeclaims
+  - persistentvolumes
+  - events
+  - configmaps
+  - secrets
+  - serviceaccounts
+  verbs:
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  - rolebindings
+  verbs:
+  - '*'
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - replicasets
+  - statefulsets
+  verbs:
+  - '*'
+- apiGroups:
+  - policy 
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - '*'
+- apiGroups:
+  - extensions 
+  resources:
+  - ingresses
+  verbs:
+  - '*'
+- apiGroups:
+  - batch 
+  resources:
+  - jobs
+  - cronjobs
+  verbs:
+  - '*'
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - create
+- apiGroups:
+  - argoproj.io
+  resources:
+  - workflows
+  verbs:
+  - '*'
+- apiGroups:
+  - openstacklcm.airshipit.org
+  resources:
+  - oslcs
+  - oslcs/status
+  - deletephases
+  - deletephases/status
+  - installphases
+  - installphases/status
+  - operationalphases
+  - operationalphases/status
+  - planningphases
+  - planningphases/status
+  - rollbackphases
+  - rollbackphases/status
+  - testphases
+  - testphases/status
+  - trafficdrainphases
+  - trafficdrainphases/status
+  - trafficrolloutphases
+  - trafficrolloutphases/status
+  - upgradephases
+  - upgradephases/status
+  verbs:
+  - '*'
