@@ -14,9 +14,6 @@ setup:
 ifndef GOPATH
 	$(error GOPATH not defined, please define GOPATH. Run "go help gopath" to learn more about GOPATH)
 endif
-	# JEB: dep ensure
-	# JEB: mkdir -p vendor/helm.sh
-	# JEB: cd vendor/helm.sh && git clone -b dev-v3 https://github.com/helm/helm.git
 
 clean:
 	rm -fr vendor
@@ -46,7 +43,6 @@ vet-v3: fmt
 
 # Generate code
 generate: setup
-	# JEB: go generate ./pkg/... ./cmd/...
 	go run vendor/sigs.k8s.io/controller-tools/cmd/controller-gen/main.go crd --output-dir ./chart/templates/ --domain airshipit.org --skip-map-validation=false
 	go run vendor/k8s.io/code-generator/cmd/deepcopy-gen/main.go --input-dirs github.com/keleustes/oslc-operator/pkg/apis/openstacklcm/v1alpha1 -O zz_generated.deepcopy --bounding-dirs github.com/keleustes/oslc-operator/pkg/apis
 
@@ -54,13 +50,11 @@ generate: setup
 docker-build: fmt docker-build-v2
 
 docker-build-v2: vet-v2
-	# JEB: operator-sdk build ${IMG_V2}
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/_output/bin/openstacklcm-operator -gcflags all=-trimpath=${GOPATH} -asmflags all=-trimpath=${GOPATH} -tags=v2 ./cmd/...
 	docker build . -f build/Dockerfile -t ${IMG_V2}
 	docker tag ${IMG_V2} ${DHUBREPO}:latest
 
 docker-build-v3: vet-v3
-	# JEB: operator-sdk build ${IMG_V2}
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/_output/bin/openstacklcm-operator -gcflags all=-trimpath=${GOPATH} -asmflags all=-trimpath=${GOPATH} -tags=v3 ./cmd/...
 	docker build . -f build/Dockerfile -t ${IMG_V3}
 	docker tag ${IMG_V3} ${DHUBREPO}:latest

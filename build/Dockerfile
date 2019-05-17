@@ -1,18 +1,20 @@
-FROM alpine:3.8
+# Copyright 2019 Keleustes.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-ENV OPERATOR=/usr/local/bin/openstacklcm-operator \
-    USER_UID=1001 \
-    USER_NAME=openstacklcm-operator
+FROM scratch
+ADD build/etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+ADD build/_output/bin/openstacklcm-operator /usr/local/bin/openstacklcm-operator
+COPY helm-charts/ /opt/armada/helm-charts/
 
-# install operator binary
-COPY build/_output/bin/openstacklcm-operator ${OPERATOR}
-
-COPY build/bin /usr/local/bin
-
-RUN  /usr/local/bin/user_setup
-
-COPY helm-charts /opt/openstacklcm-operator/helm-charts/
-
-ENTRYPOINT ["/usr/local/bin/entrypoint"]
-
-USER ${USER_UID}
+CMD ["/usr/local/bin/openstacklcm-operator"]

@@ -41,7 +41,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.0
 	github.com/joho/godotenv v1.3.0
 	github.com/json-iterator/go v1.1.5
-	github.com/keleustes/operator-ohm v0.1.2
 	github.com/mailru/easyjson v0.0.0-20180823135443-60711f1a8329
 	github.com/markbates/inflect v1.0.4
 	github.com/matttproud/golang_protobuf_extensions v1.0.1
