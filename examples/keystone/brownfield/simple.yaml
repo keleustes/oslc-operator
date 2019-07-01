@@ -1,0 +1,12 @@
+---
+apiVersion: openstacklcm.airshipit.org/v1alpha1
+kind: Oslc
+metadata:
+  name: keystone-upgrade-flow
+spec:
+  serviceName: keystone
+  source:
+    type: generate
+    location: /opt/openstacklcm-operator/helm-charts/keystone
+  flowKind: upgrade
+  targetState: deployed

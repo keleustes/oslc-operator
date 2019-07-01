@@ -1,0 +1,12 @@
+---
+apiVersion: openstacklcm.airshipit.org/v1alpha1
+kind: Oslc
+metadata:
+  name: keystone-install-flow
+spec:
+  serviceName: keystone
+  source:
+    type: generate
+    location: /opt/openstacklcm-operator/helm-charts/keystone
+  flowKind: install
+  targetState: deployed

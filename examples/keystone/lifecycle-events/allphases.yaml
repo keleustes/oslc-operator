@@ -1,0 +1,12 @@
+---
+apiVersion: openstacklcm.airshipit.org/v1alpha1
+kind: Oslc
+metadata:
+  name: keystone-all-phases
+spec:
+  serviceName: keystone
+  source:
+    type: tar
+    location: /opt/openstacklcm-operator/helm-charts/keystone
+  flowKind: all-phases
+  targetState: deployed

@@ -1,0 +1,12 @@
+---
+apiVersion: openstacklcm.airshipit.org/v1alpha1
+kind: OperationalPhase
+metadata:
+  name: keystone-operational
+spec:
+  openstackServiceName: keystone
+  targetOpenstackServiceVersion: moc.version.to.operational.to
+  targetState: deployed
+  source:
+    type: tar
+    location: /opt/openstacklcm-operator/helm-charts/keystone
