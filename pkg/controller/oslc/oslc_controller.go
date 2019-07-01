@@ -48,7 +48,7 @@ func newOslcReconciler(mgr manager.Manager) reconcile.Reconciler {
 		BaseReconciler: BaseReconciler{
 			client:         mgr.GetClient(),
 			scheme:         mgr.GetScheme(),
-			recorder:       mgr.GetRecorder("oslc-recorder"),
+			recorder:       mgr.GetEventRecorderFor("oslc-recorder"),
 			managerFactory: oslcmgr.NewManagerFactory(mgr),
 			// reconcilePeriod: flags.ReconcilePeriod,
 		},

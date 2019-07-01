@@ -48,7 +48,7 @@ func newPlanningPhaseReconciler(mgr manager.Manager) reconcile.Reconciler {
 		PhaseReconciler: PhaseReconciler{
 			client:         mgr.GetClient(),
 			scheme:         mgr.GetScheme(),
-			recorder:       mgr.GetRecorder("planningphase-recorder"),
+			recorder:       mgr.GetEventRecorderFor("planningphase-recorder"),
 			managerFactory: planningphasemgr.NewManagerFactory(mgr),
 			// reconcilePeriod: flags.ReconcilePeriod,
 		},

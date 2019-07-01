@@ -48,7 +48,7 @@ func newTrafficRolloutPhaseReconciler(mgr manager.Manager) reconcile.Reconciler 
 		PhaseReconciler: PhaseReconciler{
 			client:         mgr.GetClient(),
 			scheme:         mgr.GetScheme(),
-			recorder:       mgr.GetRecorder("trafficrolloutphase-recorder"),
+			recorder:       mgr.GetEventRecorderFor("trafficrolloutphase-recorder"),
 			managerFactory: trafficrolloutphasemgr.NewManagerFactory(mgr),
 			// reconcilePeriod: flags.ReconcilePeriod,
 		},

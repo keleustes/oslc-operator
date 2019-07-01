@@ -48,7 +48,7 @@ func newRollbackPhaseReconciler(mgr manager.Manager) reconcile.Reconciler {
 		PhaseReconciler: PhaseReconciler{
 			client:         mgr.GetClient(),
 			scheme:         mgr.GetScheme(),
-			recorder:       mgr.GetRecorder("rollbackphase-recorder"),
+			recorder:       mgr.GetEventRecorderFor("rollbackphase-recorder"),
 			managerFactory: rollbackphasemgr.NewManagerFactory(mgr),
 			// reconcilePeriod: flags.ReconcilePeriod,
 		},

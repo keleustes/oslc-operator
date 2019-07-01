@@ -48,7 +48,7 @@ func newDeletePhaseReconciler(mgr manager.Manager) reconcile.Reconciler {
 		PhaseReconciler: PhaseReconciler{
 			client:         mgr.GetClient(),
 			scheme:         mgr.GetScheme(),
-			recorder:       mgr.GetRecorder("deletephase-recorder"),
+			recorder:       mgr.GetEventRecorderFor("deletephase-recorder"),
 			managerFactory: deletephasemgr.NewManagerFactory(mgr),
 			// reconcilePeriod: flags.ReconcilePeriod,
 		},

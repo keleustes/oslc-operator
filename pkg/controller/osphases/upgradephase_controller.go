@@ -48,7 +48,7 @@ func newUpgradePhaseReconciler(mgr manager.Manager) reconcile.Reconciler {
 		PhaseReconciler: PhaseReconciler{
 			client:         mgr.GetClient(),
 			scheme:         mgr.GetScheme(),
-			recorder:       mgr.GetRecorder("upgradephase-recorder"),
+			recorder:       mgr.GetEventRecorderFor("upgradephase-recorder"),
 			managerFactory: upgradephasemgr.NewManagerFactory(mgr),
 			// reconcilePeriod: flags.ReconcilePeriod,
 		},
