@@ -84,7 +84,7 @@ install-v3: docker-build-v3
 	helm install --name openstacklcm-operator chart --set images.tags.operator=${IMG_V3}
 
 # Deploy and purge procedure which do not rely on helm itself
-install-kubectl: docker-build
+install-kubectl: setup
 	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_controllerrevisions.yaml
 	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_deletephases.yaml
 	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_installphases.yaml
@@ -100,25 +100,25 @@ install-kubectl: docker-build
 	kubectl apply -f ./chart/templates/roles.yaml
 	kubectl apply -f ./chart/templates/service_account.yaml
 	kubectl apply -f ./chart/templates/argo_openstacklcm_role.yaml
-	# kubectl create -f deploy/operator.yaml
+	kubectl create -f deploy/operator.yaml
 
 purge-kubectl: setup
-	# kubectl delete -f deploy/operator.yaml
-	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_controllerrevisions.yaml
-	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_deletephases.yaml
-	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_installphases.yaml
-	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_operationalphases.yaml
-	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_oslcs.yaml
-	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_planningphases.yaml
-	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_rollbackphases.yaml
-	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_testphases.yaml
-	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_trafficdrainphases.yaml
-	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_trafficrolloutphases.yaml
-	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_upgradephases.yaml
-	kubectl delete -f ./chart/templates/role_binding.yaml
-	kubectl delete -f ./chart/templates/roles.yaml
-	kubectl delete -f ./chart/templates/service_account.yaml
-	kubectl delete -f ./chart/templates/argo_openstacklcm_role.yaml
+	kubectl delete -f deploy/operator.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_controllerrevisions.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_deletephases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_installphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_operationalphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_oslcs.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_planningphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_rollbackphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_testphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_trafficdrainphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_trafficrolloutphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_upgradephases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/role_binding.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/roles.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/service_account.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/argo_openstacklcm_role.yaml --ignore-not-found=true
 
 getcrds:
 	kubectl get oslcs.openstacklcm.airshipit.org
