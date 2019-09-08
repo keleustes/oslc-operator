@@ -83,10 +83,13 @@ func (r *PhaseReconciler) BuildDependentPredicate() *crtpredicate.Funcs {
 			u := e.ObjectOld.(*unstructured.Unstructured)
 			v := e.ObjectNew.(*unstructured.Unstructured)
 
+			// Filter on Status change
 			dep := &av1.KubernetesDependency{}
-			if dep.UnstructuredStatusChanged(u, v) {
-				// phaselog.Info("UpdateEvent. Status changed", "resource", u.GetName(), "namespace", u.GetNamespace(),
-				//	"apiVersion", u.GroupVersionKind().GroupVersion(), "kind", u.GroupVersionKind().Kind)
+			changed, oldv, newv := dep.UnstructuredStatusChanged(u, v)
+			if changed {
+				phaselog.Info("UpdateEvent. Status changed", "resource", u.GetName(), "namespace", u.GetNamespace(),
+					"apiVersion", u.GroupVersionKind().GroupVersion(), "kind", u.GroupVersionKind().Kind,
+					"old", oldv, "new", newv)
 				return true
 			}
 

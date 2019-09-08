@@ -325,6 +325,26 @@ func (obj *LifecycleFlow) IsReady() bool {
 	return true
 }
 
+func (obj *LifecycleFlow) IsFailedOrError() bool {
+
+	dep := &KubernetesDependency{}
+
+	// Check the state of the Main workflow to figure out
+	// if the phase is still running
+	if obj.Main != nil && dep.IsUnstructuredFailedOrError(obj.Main) {
+		return true
+	}
+
+	// The state of the main workflow should be enough to
+	// reflect the state of the LifecycleFlow. Also we
+	// have access to the Phases, don't need to monitor
+	// their state
+	// for _, item := range obj.Phases {
+	// }
+
+	return false
+}
+
 // Returns a new LifecycleFlow
 func NewLifecycleFlow(namespace string, name string) *LifecycleFlow {
 	res := &LifecycleFlow{Namespace: namespace, Name: name}

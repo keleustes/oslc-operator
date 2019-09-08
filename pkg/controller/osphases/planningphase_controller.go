@@ -445,6 +445,24 @@ func (r PlanningPhaseReconciler) reconcilePlanningPhase(mgr services.PlanningPha
 		return err
 	}
 
+	if reconciledResource.IsFailedOrError() {
+		// We reconcile. Everything is ready. The flow is now ok
+		instance.Status.RemoveCondition(av1.ConditionRunning)
+
+		hrc := av1.LcmResourceCondition{
+			Type:         av1.ConditionError,
+			Status:       av1.ConditionStatusTrue,
+			Reason:       av1.ReasonUnderlyingResourcesError,
+			Message:      reconciledResource.GetPhaseKind().String(),
+			ResourceName: reconciledResource.GetName(),
+		}
+		instance.Status.SetCondition(hrc, instance.Spec.TargetState)
+		r.logAndRecordSuccess(instance, &hrc)
+
+		err = r.updateResourceStatus(instance)
+		return err
+	}
+
 	if reconciledResource.IsReady() {
 		// We reconcile. Everything is ready. The flow is now ok
 		instance.Status.RemoveCondition(av1.ConditionRunning)

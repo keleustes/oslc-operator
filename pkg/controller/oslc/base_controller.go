@@ -84,9 +84,11 @@ func (r *BaseReconciler) BuildDependentPredicate() *crtpredicate.Funcs {
 			v := e.ObjectNew.(*unstructured.Unstructured)
 
 			dep := &av1.KubernetesDependency{}
-			if dep.UnstructuredStatusChanged(u, v) {
-				// oslclog.Info("UpdateEvent. Status changed", "resource", u.GetName(), "namespace", u.GetNamespace(),
-				//	"apiVersion", u.GroupVersionKind().GroupVersion(), "kind", u.GroupVersionKind().Kind)
+			changed, oldv, newv := dep.UnstructuredStatusChanged(u, v)
+			if changed {
+				oslclog.Info("UpdateEvent. Status changed", "resource", u.GetName(), "namespace", u.GetNamespace(),
+					"apiVersion", u.GroupVersionKind().GroupVersion(), "kind", u.GroupVersionKind().Kind,
+					"old", oldv, "new", newv)
 				return true
 			}
 

@@ -92,6 +92,7 @@ const (
 	ReasonUninstallSuccessful                                 = "UninstallSuccessful"
 	ReasonUpdateSuccessful                                    = "UpdateSuccessful"
 	ReasonUnderlyingResourcesReady                            = "UnderlyingResourcesReady"
+	ReasonUnderlyingResourcesError                            = "UnderlyingResourcesError"
 
 	// Error Condition Reasons
 	ReasonInstallError   LcmResourceConditionReason = "InstallError"
@@ -417,6 +418,20 @@ func (obj *SubResourceList) IsReady() bool {
 	}
 
 	return true
+}
+
+func (obj *SubResourceList) IsFailedOrError() bool {
+
+	dep := &KubernetesDependency{}
+
+	// Check that each sub resource is owned by the phase
+	for _, item := range obj.Items {
+		if dep.IsUnstructuredFailedOrError(&item) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Returns a new SubResourceList
