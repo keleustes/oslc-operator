@@ -15,6 +15,6 @@
 FROM scratch
 ADD build/etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 ADD build/_output/bin/openstacklcm-operator /usr/local/bin/openstacklcm-operator
-COPY helm-charts/ /opt/armada/helm-charts/
+COPY helm-charts/ /opt/openstacklcm-operator/helm-charts/
 
 CMD ["/usr/local/bin/openstacklcm-operator"]
