@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"time"
 
-	av1 "github.com/keleustes/oslc-operator/pkg/apis/openstacklcm/v1alpha1"
+	av1 "github.com/keleustes/armada-crd/pkg/apis/openstacklcm/v1alpha1"
 	services "github.com/keleustes/oslc-operator/pkg/services"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

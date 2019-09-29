@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	av1 "github.com/keleustes/oslc-operator/pkg/apis/openstacklcm/v1alpha1"
+	av1 "github.com/keleustes/armada-crd/pkg/apis/openstacklcm/v1alpha1"
 	oslcmgr "github.com/keleustes/oslc-operator/pkg/oslc"
 	services "github.com/keleustes/oslc-operator/pkg/services"
 

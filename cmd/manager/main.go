@@ -7,7 +7,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/keleustes/oslc-operator/pkg/apis"
+	"github.com/keleustes/armada-crd/pkg/apis"
 	"github.com/keleustes/oslc-operator/pkg/controller"
 	"github.com/keleustes/oslc-operator/pkg/k8sutil"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
