@@ -1,0 +1,33 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openstacklcm-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: openstacklcm-operator
+  template:
+    metadata:
+      labels:
+        name: openstacklcm-operator
+    spec:
+      serviceAccountName: openstacklcm-operator
+      containers:
+        - name: openstacklcm-operator
+          image: keleustes/openstacklcm-operator-dev:v2.14.1
+          command:
+          - openstacklcm-operator
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "openstacklcm-operator"

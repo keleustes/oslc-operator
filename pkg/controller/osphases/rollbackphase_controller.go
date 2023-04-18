@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	av1 "github.com/keleustes/oslc-operator/pkg/apis/openstacklcm/v1alpha1"
+	av1 "github.com/keleustes/armada-crd/pkg/apis/openstacklcm/v1alpha1"
 	rollbackphasemgr "github.com/keleustes/oslc-operator/pkg/osphases"
 	services "github.com/keleustes/oslc-operator/pkg/services"
 
@@ -27,9 +27,9 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	crthandler "sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -48,7 +48,7 @@ func newRollbackPhaseReconciler(mgr manager.Manager) reconcile.Reconciler {
 		PhaseReconciler: PhaseReconciler{
 			client:         mgr.GetClient(),
 			scheme:         mgr.GetScheme(),
-			recorder:       mgr.GetRecorder("rollbackphase-recorder"),
+			recorder:       mgr.GetEventRecorderFor("rollbackphase-recorder"),
 			managerFactory: rollbackphasemgr.NewManagerFactory(mgr),
 			// reconcilePeriod: flags.ReconcilePeriod,
 		},
@@ -108,7 +108,7 @@ const (
 // Note: The Controller will requeue the Request to be processed again if the
 // returned error is non-nil or Result.Requeue is true, otherwise upon
 // completion it will remove the work from the queue.
-func (r *RollbackPhaseReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *RollbackPhaseReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	reclog := rollbackphaselog.WithValues("namespace", request.Namespace, "rollbackphase", request.Name)
 	reclog.Info("Reconciling")
 
@@ -442,6 +442,24 @@ func (r RollbackPhaseReconciler) reconcileRollbackPhase(mgr services.RollbackPha
 
 	if err := r.watchDependentResources(reconciledResource); err != nil {
 		reclog.Error(err, "Failed to update watch on dependent resources")
+		return err
+	}
+
+	if reconciledResource.IsFailedOrError() {
+		// We reconcile. Everything is ready. The flow is now ok
+		instance.Status.RemoveCondition(av1.ConditionRunning)
+
+		hrc := av1.LcmResourceCondition{
+			Type:         av1.ConditionError,
+			Status:       av1.ConditionStatusTrue,
+			Reason:       av1.ReasonUnderlyingResourcesError,
+			Message:      reconciledResource.GetPhaseKind().String(),
+			ResourceName: reconciledResource.GetName(),
+		}
+		instance.Status.SetCondition(hrc, instance.Spec.TargetState)
+		r.logAndRecordSuccess(instance, &hrc)
+
+		err = r.updateResourceStatus(instance)
 		return err
 	}
 

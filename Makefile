@@ -1,8 +1,7 @@
 
 # Image URL to use all building/pushing image targets
 COMPONENT        ?= openstacklcm-operator
-VERSION_V2       ?= 2.13.0
-VERSION_V3       ?= 3.0.0
+VERSION_V3       ?= 3.11.0
 DHUBREPO         ?= keleustes/${COMPONENT}-dev
 DOCKER_NAMESPACE ?= keleustes
 IMG_V2           ?= ${DHUBREPO}:v${VERSION_V2}
@@ -11,18 +10,46 @@ IMG_V3           ?= ${DHUBREPO}:v${VERSION_V3}
 all: docker-build
 
 setup:
-ifndef GOPATH
-	$(error GOPATH not defined, please define GOPATH. Run "go help gopath" to learn more about GOPATH)
-endif
+# ifndef GOPATH
+# 	$(error GOPATH not defined, please define GOPATH. Run "go help gopath" to learn more about GOPATH)
+# endif
+	echo $(GOPATH)
 
+.PHONY: clean
 clean:
 	rm -fr vendor
 	rm -fr cover.out
 	rm -fr build/_output
 	rm -fr config/crds
 
+.PHONY: install-tools
+install-tools:
+	cd /tmp && GO111MODULE=on go get sigs.k8s.io/kind@v0.5.0
+	cd /tmp && GO111MODULE=on go get github.com/instrumenta/kubeval@0.13.0
+
+# clusterexist=$(shell kind get clusters | grep oslc  | wc -l)
+# ifeq ($(clusterexist), 1)
+#   testcluster=$(shell kind get kubeconfig-path --name="oslc")
+#   SETKUBECONFIG=KUBECONFIG=$(testcluster)
+# else
+#   SETKUBECONFIG=
+# endif
+
+.PHONY: which-cluster
+which-cluster:
+	echo $(SETKUBECONFIG)
+
+.PHONY: create-testcluster
+create-testcluster:
+	kind create cluster --name oslc
+
+.PHONY: delete-testcluster
+delete-testcluster:
+	kind delete cluster --name oslc
+
+
 # Run tests
-unittest: setup fmt vet-v2
+unittest: setup fmt vet-v3
 	echo "sudo systemctl stop kubelet"
 	echo -e 'docker stop $$(docker ps -qa)'
 	echo -e 'export PATH=$${PATH}:/usr/local/kubebuilder/bin'
@@ -35,24 +62,18 @@ fmt: setup
 	GO111MODULE=on go fmt ./pkg/... ./cmd/...
 
 # Run go vet against code
-vet-v2: fmt
-	GO111MODULE=on go vet -composites=false -tags=v2 ./pkg/... ./cmd/...
-
 vet-v3: fmt
 	GO111MODULE=on go vet -composites=false -tags=v3 ./pkg/... ./cmd/...
 
 # Generate code
 generate: setup
-	GO111MODULE=on go run vendor/sigs.k8s.io/controller-tools/cmd/controller-gen/main.go crd --output-dir ./chart/templates/ --domain airshipit.org --skip-map-validation=false
-	GO111MODULE=on go run vendor/k8s.io/code-generator/cmd/deepcopy-gen/main.go --input-dirs github.com/keleustes/oslc-operator/pkg/apis/openstacklcm/v1alpha1 -O zz_generated.deepcopy --bounding-dirs github.com/keleustes/oslc-operator/pkg/apis
+        # git clone sigs.k8s.io/controller-tools
+        # go install ./cmd/...
+	GO111MODULE=on controller-gen crd paths=./pkg/apis/openstacklcm/... crd:trivialVersions=true output:crd:dir=./chart/templates/ output:none
+	GO111MODULE=on controller-gen object paths=./pkg/apis/openstacklcm/... output:object:dir=./pkg/apis/openstacklcm/v1alpha1 output:none
 
 # Build the docker image
-docker-build: fmt docker-build-v2
-
-docker-build-v2: vet-v2
-	GO111MODULE=on GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/_output/bin/openstacklcm-operator -gcflags all=-trimpath=${GOPATH} -asmflags all=-trimpath=${GOPATH} -tags=v2 ./cmd/...
-	docker build . -f build/Dockerfile -t ${IMG_V2}
-	docker tag ${IMG_V2} ${DHUBREPO}:latest
+docker-build: fmt docker-build-v3
 
 docker-build-v3: vet-v3
 	GO111MODULE=on GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/_output/bin/openstacklcm-operator -gcflags all=-trimpath=${GOPATH} -asmflags all=-trimpath=${GOPATH} -tags=v3 ./cmd/...
@@ -61,52 +82,56 @@ docker-build-v3: vet-v3
 
 
 # Push the docker image
-docker-push: docker-push-v2
-
-docker-push-v2:
-	docker push ${IMG_V2}
+docker-push: docker-push-v3
 
 docker-push-v3:
 	docker push ${IMG_V3}
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
-install: install-v2
+install: install-v3
 
 purge: setup
 	helm delete --purge openstacklcm-operator
-
-install-v2: docker-build-v2
-	helm install --name openstacklcm-operator chart --set images.tags.operator=${IMG_V2}
 
 install-v3: docker-build-v3
 	helm install --name openstacklcm-operator chart --set images.tags.operator=${IMG_V3}
 
 # Deploy and purge procedure which do not rely on helm itself
-install-kubectl: docker-build
-	kubectl apply -f ./chart/templates/openstacklcm_v1alpha1_openstackbackup.yaml
-	kubectl apply -f ./chart/templates/openstacklcm_v1alpha1_openstackdeployment.yaml
-	kubectl apply -f ./chart/templates/openstacklcm_v1alpha1_openstackrestore.yaml
-	kubectl apply -f ./chart/templates/openstacklcm_v1alpha1_openstackrollback.yaml
-	kubectl apply -f ./chart/templates/openstacklcm_v1alpha1_openstackupgrade.yaml
-	kubectl apply -f ./chart/templates/openstacklcm_v1alpha1_oslc.yaml
+install-kubectl: setup
+	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_controllerrevisions.yaml
+	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_deletephases.yaml
+	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_installphases.yaml
+	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_operationalphases.yaml
+	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_oslcs.yaml
+	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_planningphases.yaml
+	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_rollbackphases.yaml
+	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_testphases.yaml
+	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_trafficdrainphases.yaml
+	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_trafficrolloutphases.yaml
+	kubectl apply -f ./chart/templates/openstacklcm.airshipit.org_upgradephases.yaml
 	kubectl apply -f ./chart/templates/role_binding.yaml
-	kubectl apply -f ./chart/templates/role.yaml
+	kubectl apply -f ./chart/templates/roles.yaml
 	kubectl apply -f ./chart/templates/service_account.yaml
 	kubectl apply -f ./chart/templates/argo_openstacklcm_role.yaml
 	kubectl create -f deploy/operator.yaml
 
 purge-kubectl: setup
-	kubectl delete -f deploy/operator.yaml
-	kubectl delete -f ./chart/templates/openstacklcm_v1alpha1_openstackbackup.yaml
-	kubectl delete -f ./chart/templates/openstacklcm_v1alpha1_openstackdeployment.yaml
-	kubectl delete -f ./chart/templates/openstacklcm_v1alpha1_openstackrestore.yaml
-	kubectl delete -f ./chart/templates/openstacklcm_v1alpha1_openstackrollback.yaml
-	kubectl delete -f ./chart/templates/openstacklcm_v1alpha1_openstackupgrade.yaml
-	kubectl delete -f ./chart/templates/openstacklcm_v1alpha1_oslc.yaml
-	kubectl delete -f ./chart/templates/role_binding.yaml
-	kubectl delete -f ./chart/templates/role.yaml
-	kubectl delete -f ./chart/templates/service_account.yaml
-	kubectl delete -f ./chart/templates/argo_openstacklcm_role.yaml
+	kubectl delete -f deploy/operator.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_controllerrevisions.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_deletephases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_installphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_operationalphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_oslcs.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_planningphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_rollbackphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_testphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_trafficdrainphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_trafficrolloutphases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/openstacklcm.airshipit.org_upgradephases.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/role_binding.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/roles.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/service_account.yaml --ignore-not-found=true
+	kubectl delete -f ./chart/templates/argo_openstacklcm_role.yaml --ignore-not-found=true
 
 getcrds:
 	kubectl get oslcs.openstacklcm.airshipit.org

@@ -17,7 +17,7 @@ package osphases
 import (
 	"context"
 
-	av1 "github.com/keleustes/oslc-operator/pkg/apis/openstacklcm/v1alpha1"
+	av1 "github.com/keleustes/armada-crd/pkg/apis/openstacklcm/v1alpha1"
 	lcmif "github.com/keleustes/oslc-operator/pkg/services"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

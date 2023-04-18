@@ -15,7 +15,7 @@
 package services
 
 import (
-	av1 "github.com/keleustes/oslc-operator/pkg/apis/openstacklcm/v1alpha1"
+	av1 "github.com/keleustes/armada-crd/pkg/apis/openstacklcm/v1alpha1"
 )
 
 // ManagerFactory creates Managers that are specific to custom resources.

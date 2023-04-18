@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"time"
 
-	av1 "github.com/keleustes/oslc-operator/pkg/apis/openstacklcm/v1alpha1"
+	av1 "github.com/keleustes/armada-crd/pkg/apis/openstacklcm/v1alpha1"
 	services "github.com/keleustes/oslc-operator/pkg/services"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -27,8 +27,8 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	crtpredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var phaselog = logf.Log.WithName("base-controller")
@@ -84,9 +84,11 @@ func (r *BaseReconciler) BuildDependentPredicate() *crtpredicate.Funcs {
 			v := e.ObjectNew.(*unstructured.Unstructured)
 
 			dep := &av1.KubernetesDependency{}
-			if dep.UnstructuredStatusChanged(u, v) {
-				// oslclog.Info("UpdateEvent. Status changed", "resource", u.GetName(), "namespace", u.GetNamespace(),
-				//	"apiVersion", u.GroupVersionKind().GroupVersion(), "kind", u.GroupVersionKind().Kind)
+			changed, oldv, newv := dep.UnstructuredStatusChanged(u, v)
+			if changed {
+				oslclog.Info("UpdateEvent. Status changed", "resource", u.GetName(), "namespace", u.GetNamespace(),
+					"apiVersion", u.GroupVersionKind().GroupVersion(), "kind", u.GroupVersionKind().Kind,
+					"old", oldv, "new", newv)
 				return true
 			}
 
