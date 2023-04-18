@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	discovery "k8s.io/client-go/discovery"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var log = logf.Log.WithName("k8sutil")
@@ -73,7 +73,7 @@ func GetOperatorName() (string, error) {
 // ResourceExists returns true if the given resource kind exists
 // in the given api groupversion
 func ResourceExists(dc discovery.DiscoveryInterface, apiGroupVersion, kind string) (bool, error) {
-	apiLists, err := dc.ServerResources()
+	apiLists, err := dc.ServerPreferredResources()
 	if err != nil {
 		return false, err
 	}

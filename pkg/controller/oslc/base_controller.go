@@ -27,8 +27,8 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	crtpredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var phaselog = logf.Log.WithName("base-controller")

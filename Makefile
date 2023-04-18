@@ -1,8 +1,7 @@
 
 # Image URL to use all building/pushing image targets
 COMPONENT        ?= openstacklcm-operator
-VERSION_V2       ?= 2.16.0
-VERSION_V3       ?= 3.0.0
+VERSION_V3       ?= 3.11.0
 DHUBREPO         ?= keleustes/${COMPONENT}-dev
 DOCKER_NAMESPACE ?= keleustes
 IMG_V2           ?= ${DHUBREPO}:v${VERSION_V2}
@@ -11,9 +10,10 @@ IMG_V3           ?= ${DHUBREPO}:v${VERSION_V3}
 all: docker-build
 
 setup:
-ifndef GOPATH
-	$(error GOPATH not defined, please define GOPATH. Run "go help gopath" to learn more about GOPATH)
-endif
+# ifndef GOPATH
+# 	$(error GOPATH not defined, please define GOPATH. Run "go help gopath" to learn more about GOPATH)
+# endif
+	echo $(GOPATH)
 
 .PHONY: clean
 clean:
@@ -27,13 +27,13 @@ install-tools:
 	cd /tmp && GO111MODULE=on go get sigs.k8s.io/kind@v0.5.0
 	cd /tmp && GO111MODULE=on go get github.com/instrumenta/kubeval@0.13.0
 
-clusterexist=$(shell kind get clusters | grep oslc  | wc -l)
-ifeq ($(clusterexist), 1)
-  testcluster=$(shell kind get kubeconfig-path --name="oslc")
-  SETKUBECONFIG=KUBECONFIG=$(testcluster)
-else
-  SETKUBECONFIG=
-endif
+# clusterexist=$(shell kind get clusters | grep oslc  | wc -l)
+# ifeq ($(clusterexist), 1)
+#   testcluster=$(shell kind get kubeconfig-path --name="oslc")
+#   SETKUBECONFIG=KUBECONFIG=$(testcluster)
+# else
+#   SETKUBECONFIG=
+# endif
 
 .PHONY: which-cluster
 which-cluster:
@@ -49,7 +49,7 @@ delete-testcluster:
 
 
 # Run tests
-unittest: setup fmt vet-v2
+unittest: setup fmt vet-v3
 	echo "sudo systemctl stop kubelet"
 	echo -e 'docker stop $$(docker ps -qa)'
 	echo -e 'export PATH=$${PATH}:/usr/local/kubebuilder/bin'
@@ -62,9 +62,6 @@ fmt: setup
 	GO111MODULE=on go fmt ./pkg/... ./cmd/...
 
 # Run go vet against code
-vet-v2: fmt
-	GO111MODULE=on go vet -composites=false -tags=v2 ./pkg/... ./cmd/...
-
 vet-v3: fmt
 	GO111MODULE=on go vet -composites=false -tags=v3 ./pkg/... ./cmd/...
 
@@ -76,12 +73,7 @@ generate: setup
 	GO111MODULE=on controller-gen object paths=./pkg/apis/openstacklcm/... output:object:dir=./pkg/apis/openstacklcm/v1alpha1 output:none
 
 # Build the docker image
-docker-build: fmt docker-build-v2
-
-docker-build-v2: vet-v2
-	GO111MODULE=on GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/_output/bin/openstacklcm-operator -gcflags all=-trimpath=${GOPATH} -asmflags all=-trimpath=${GOPATH} -tags=v2 ./cmd/...
-	docker build . -f build/Dockerfile -t ${IMG_V2}
-	docker tag ${IMG_V2} ${DHUBREPO}:latest
+docker-build: fmt docker-build-v3
 
 docker-build-v3: vet-v3
 	GO111MODULE=on GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/_output/bin/openstacklcm-operator -gcflags all=-trimpath=${GOPATH} -asmflags all=-trimpath=${GOPATH} -tags=v3 ./cmd/...
@@ -90,22 +82,16 @@ docker-build-v3: vet-v3
 
 
 # Push the docker image
-docker-push: docker-push-v2
-
-docker-push-v2:
-	docker push ${IMG_V2}
+docker-push: docker-push-v3
 
 docker-push-v3:
 	docker push ${IMG_V3}
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
-install: install-v2
+install: install-v3
 
 purge: setup
 	helm delete --purge openstacklcm-operator
-
-install-v2: docker-build-v2
-	helm install --name openstacklcm-operator chart --set images.tags.operator=${IMG_V2}
 
 install-v3: docker-build-v3
 	helm install --name openstacklcm-operator chart --set images.tags.operator=${IMG_V3}
